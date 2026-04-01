@@ -1,0 +1,66 @@
+name: Reserva Pádel Mutilva
+
+on:
+  schedule:
+    # ─────────────────────────────────────────────────────────────────
+    # GitHub Actions usa UTC. España = UTC+1 (invierno) / UTC+2 (verano)
+    # Para lanzar a las 00:00 hora España → 23:00 UTC en invierno
+    #                                     → 22:00 UTC en verano
+    #
+    # Descomenta los días que quieras automatizar:
+    # ─────────────────────────────────────────────────────────────────
+    - cron: "0 23 * * 0"     # Domingo  → reserva el LUNES    ✅
+    # - cron: "0 23 * * 1"   # Lunes    → reserva el MARTES
+    # - cron: "0 23 * * 2"   # Martes   → reserva el MIÉRCOLES
+    # - cron: "0 23 * * 3"   # Miércoles → reserva el JUEVES
+    # - cron: "0 23 * * 4"   # Jueves   → reserva el VIERNES
+    # - cron: "0 23 * * 5"   # Viernes  → reserva el SÁBADO
+    # - cron: "0 23 * * 6"   # Sábado   → reserva el DOMINGO
+    #
+    # ⚠️  HORARIO DE VERANO (marzo–octubre):
+    #     Cambia 23:00 → 22:00 en todas las líneas activas.
+    # ─────────────────────────────────────────────────────────────────
+
+  # Lanzamiento manual para pruebas o reservas puntuales
+  workflow_dispatch:
+    inputs:
+      fecha:
+        description: "Fecha a reservar (YYYY-MM-DD). Vacío = mañana"
+        required: false
+        default: ""
+      hora:
+        description: "Hora preferida (HH:MM)"
+        required: false
+        default: "20:00"
+      pista:
+        description: "ID de pista preferida. Vacío = Padel 2 por defecto"
+        required: false
+        default: ""
+
+jobs:
+  reservar:
+    name: Reservar pista de pádel
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Ejecutar reserva
+        env:
+          BKT_LOGIN:    ${{ secrets.BKT_LOGIN }}
+          BKT_PASSWORD: ${{ secrets.BKT_PASSWORD }}
+          BKT_DATE:     ${{ inputs.fecha }}
+          BKT_TIME:     ${{ inputs.hora || '20:00' }}
+          BKT_AGENDA:   ${{ inputs.pista }}
+        run: python reserve_padel.py
