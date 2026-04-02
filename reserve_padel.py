@@ -56,11 +56,13 @@ HORA_PREFERIDA = os.environ.get("BKT_TIME", "20:00")
 # Pista preferida: si se especifica, va primero; si no, usa el orden por defecto
 AGENDA_PREFERIDA = os.environ.get("BKT_AGENDA", "")
 
-# Fecha: explícita o mañana automáticamente
+# Fecha: explícita o mañana en hora española (UTC+1 invierno / UTC+2 verano)
 if os.environ.get("BKT_DATE"):
     FECHA = os.environ["BKT_DATE"]
 else:
-    FECHA = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    import zoneinfo
+    madrid = zoneinfo.ZoneInfo("Europe/Madrid")
+    FECHA = (datetime.now(madrid) + timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ══════════════════════════════════════════════════════════
 #  CLIENTE HTTP
@@ -76,8 +78,7 @@ session.headers.update({
 
 
 def jsonp(text: str) -> dict:
-    """Parsea respuesta JSONP: bkt_cb_xxx({...}) → dict"""
-    print(f"    [DEBUG] Respuesta raw (primeros 300 chars): {text[:300]}")
+    """Parsea respuesta JSONP: callback=bkt_cb_xxx({...}) → dict"""
     start = text.index("(") + 1
     end   = text.rindex(")")
     return json.loads(text[start:end])
@@ -110,11 +111,15 @@ def horas_libres(agenda_id: str) -> list[str]:
     r = session.get(f"{BASE_URL}/datetime/", params=p)
     r.raise_for_status()
     slots = jsonp(r.text).get("Slots", [])
-    return [
-        s["time"][:5]
-        for s in slots
-        if int(s.get("freeslots", 0)) > 0
-    ]
+    libres = []
+    for slot in slots:
+        if slot.get("date") != FECHA:
+            continue
+        times = slot.get("times", {})
+        for t in times.values():
+            if int(t.get("freeSlots", 0)) > 0:
+                libres.append(t["time"][:5])
+    return libres
 
 
 def signin(agenda_id: str, hora: str) -> dict:
