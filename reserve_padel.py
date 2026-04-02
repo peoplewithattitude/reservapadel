@@ -230,7 +230,14 @@ def main():
         sys.exit(1)
 
     # ── Confirmación ──────────────────────────────────────────────────────────
-    token = (res.get("Access") or {}).get("bktToken")
+    print(f"    [DEBUG] Respuesta signin: {json.dumps(res, ensure_ascii=False)[:400]}")
+    access = res.get("Access")
+    if isinstance(access, dict):
+        token = access.get("bktToken")
+    elif isinstance(access, str):
+        token = access  # algunas versiones devuelven el token directamente
+    else:
+        token = None
 
     if token:
         try:
