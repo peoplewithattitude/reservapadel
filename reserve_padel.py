@@ -77,6 +77,7 @@ session.headers.update({
 
 def jsonp(text: str) -> dict:
     """Parsea respuesta JSONP: bkt_cb_xxx({...}) → dict"""
+    print(f"    [DEBUG] Respuesta raw (primeros 300 chars): {text[:300]}")
     start = text.index("(") + 1
     end   = text.rindex(")")
     return json.loads(text[start:end])
